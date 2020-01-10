@@ -34,6 +34,7 @@ LIB_OBJECTS = [
 
 MODULE_SOURCES = ['python/_jsonnet.c']
 
+
 def get_version():
     """
     Parses the version out of libjsonnet.h
@@ -46,19 +47,35 @@ def get_version():
                     v_code = v_code[1:]
                 return v_code
 
+
 class BuildJsonnetExt(BuildExt):
     def run(self):
-        p = Popen(['make'] + LIB_OBJECTS, cwd=DIR)
+        if os.name == 'nt':
+            build_command = [
+                "cmake",
+                ".",
+                "-Bbuild",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DBUILD_JSONNET=OFF",
+                "-DBUILD_JSONNETFMT=OFF",
+                "-DBUILD_TESTS=OFF",
+                "-DBUILD_STATIC_LIBS=OFF",
+            ]
+        else:
+            build_command = ['make'] + LIB_OBJECTS
+
+        p = Popen(build_command, cwd=DIR)
         p.wait()
         if p.returncode != 0:
-            raise Exception('Could not build %s' % (', '.join(LIB_OBJECTS)))
+            raise Exception("Could not build C/C++ code")
         BuildExt.run(self)
+
 
 jsonnet_ext = Extension(
     '_jsonnet',
     sources=MODULE_SOURCES,
     extra_objects=LIB_OBJECTS,
-    include_dirs = ['include', 'third_party/md5', 'third_party/json'],
+    include_dirs=['include', 'third_party/md5', 'third_party/json'],
     language='c++'
 )
 
@@ -73,4 +90,4 @@ setup(name='jsonnet',
       },
       ext_modules=[jsonnet_ext],
       test_suite="python._jsonnet_test",
-)
+      )
